@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "3d-tiles-renderer": "^0.3.20",
+    "three": "^0.156.1"
+  },
+  "devDependencies": {
+    "vite": "^4.4.9"
+  }
+}
