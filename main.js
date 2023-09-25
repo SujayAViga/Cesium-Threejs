@@ -1,78 +1,166 @@
 import * as THREE from 'three';
-import { TilesRenderer } from '3d-tiles-renderer';
+import { TilesRenderer, CesiumIonTilesRenderer } from '3d-tiles-renderer';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+import { DRACOLoader } from 'three/examples/jsm/loaders/dracoloader';
+import {
+	Scene,
+	WebGLRenderer,
+	PerspectiveCamera,
+	Vector3,
+	Quaternion,
+	Group,
+	Sphere,
+} from 'three';
+
+import { GLTFLoader } from 'three/examples/jsm/loaders/gltfloader';
+import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+
+let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
+
+const params = {
+
+	'ionAssetId': '2275057',
+	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZjk1OTU2My1mNDBhLTQzYzEtOTcxMS01MzNiOWIxMDZiYTMiLCJpZCI6MTY2MDkxLCJpYXQiOjE2OTQ1NDMyOTN9.rHxFqNMZ26EFHwHYUJ-xW0fDZtjamHXiM-4HR6YIHXY',
+	'reload': reinstantiateTiles,
+
+};
+
+init();
+animate();
+
+function rotationBetweenDirections( dir1, dir2 ) {
+
+	const rotation = new Quaternion();
+	const a = new Vector3().crossVectors( dir1, dir2 );
+	rotation.x = a.x;
+	rotation.y = a.y;
+	rotation.z = a.z;
+	rotation.w = 1 + dir1.clone().dot( dir2 );
+	rotation.normalize();
+
+	return rotation;
+
+}
+
+function setupTiles() {
+
+	tiles.fetchOptions.mode = 'cors';
+
+	// Note the DRACO compression files need to be supplied via an explicit source.
+	// We use unpkg here but in practice should be provided by the application.
+	const dracoLoader = new DRACOLoader();
+	dracoLoader.setDecoderPath( 'https://unpkg.com/three@0.153.0/examples/jsm/libs/draco/gltf/' );
+
+	const loader = new GLTFLoader( tiles.manager );
+	loader.setDRACOLoader( dracoLoader );
+
+	tiles.manager.addHandler( /\.gltf$/, loader );
+	scene.add( tiles.group );
+
+}
+
+function reinstantiateTiles() {
+
+	if ( tiles ) {
+
+		scene.remove( tiles.group );
+		tiles.dispose();
+		tiles = null;
+
+	}
+
+	tiles = new CesiumIonTilesRenderer( params.ionAssetId, params.ionAccessToken );
+	tiles.onLoadTileSet = () => {
+
+		// because ion examples typically are positioned on the planet surface we can orient
+		// it such that up is Y+ and center the model
+		const sphere = new Sphere();
+		tiles.getBoundingSphere( sphere );
+
+		const position = sphere.center.clone();
+		const distanceToEllipsoidCenter = position.length();
+
+		const surfaceDirection = position.normalize();
+		const up = new Vector3( 0, 1, 0 );
+		const rotationToNorthPole = rotationBetweenDirections( surfaceDirection, up );
+
+		tiles.group.quaternion.x = rotationToNorthPole.x;
+		tiles.group.quaternion.y = rotationToNorthPole.y;
+		tiles.group.quaternion.z = rotationToNorthPole.z;
+		tiles.group.quaternion.w = rotationToNorthPole.w;
+
+		tiles.group.position.y = - distanceToEllipsoidCenter;
+
+	};
+
+	setupTiles();
+
+}
 
 
-// initialize threejs
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
-camera.position.z = 5;
-// threejs scene
+function init() {
 
-const assetId = "2275057";
-const accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZjk1OTU2My1mNDBhLTQzYzEtOTcxMS01MzNiOWIxMDZiYTMiLCJpZCI6MTY2MDkxLCJpYXQiOjE2OTQ1NDMyOTN9.rHxFqNMZ26EFHwHYUJ-xW0fDZtjamHXiM-4HR6YIHXY"
+	scene = new Scene();
 
-var tiles
-// fetch a temporary token for the Cesium Ion asset
-var url = new URL( `https://api.cesium.com/v1/assets/${ assetId }/endpoint` );
-url.searchParams.append( 'access_token', accessToken );
+	// primary camera view
+	renderer = new WebGLRenderer( { antialias: true } );
+	renderer.setClearColor( 0x151c1f );
 
-fetch( url, { mode: 'cors' } )
-	.then( res => res.json() )
-	.then( json => {
+	document.body.appendChild( renderer.domElement );
+	renderer.domElement.tabIndex = 1;
 
-		url = new URL( json.url );
+	camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 4000 );
+	camera.position.set( 1, 5, 4 );
+	controls = new OrbitControls( camera, renderer.domElement );
 
-		const version = url.searchParams.get( 'v' );
-		tiles = new TilesRenderer( url );
-		tiles.fetchOptions.headers = {};
-		tiles.fetchOptions.headers.Authorization = `Bearer ${json.accessToken}`;
+	cubeGeo = new THREE.BoxGeometry( 1, 1, 1 );
+	cubeMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+	cube = new THREE.Mesh( cubeGeo, cubeMat );
+	scene.add( cube );
+	
+	light = new THREE.AmbientLight( 0x404040,10 ); // soft white light
+	scene.add( light );
 
-		// Prefilter each model fetch by setting the cesium Ion version to the search
-		// parameters of the url.
-		tiles.onPreprocessURL = uri => {
+	reinstantiateTiles();
 
-			uri = new URL( uri );
-			uri.searchParams.append( 'v', version );
-			return uri;
+	onWindowResize();
+	window.addEventListener( 'resize', onWindowResize, false );
 
-		};
+	// GUI
+	const gui = new GUI();
+	gui.width = 300;
 
-	} );
+	const ionOptions = gui.addFolder( 'Ion' );
+	ionOptions.add( params, 'ionAssetId' );
+	ionOptions.add( params, 'ionAccessToken' );
+	ionOptions.add( params, 'reload' );
+	ionOptions.open();
 
-const tilesRenderer = new TilesRenderer( './path/to/tileset.json' );
-// tilesRenderer.setCamera( camera );
-// tilesRenderer.setResolutionFromRenderer( camera, renderer );
-// scene.add( tiles.group );
+}
 
-// renderLoop();
+function onWindowResize() {
 
-function renderLoop() {
-
-	requestAnimationFrame( renderLoop );
-
-	// The camera matrix is expected to be up to date
-	// before calling tilesRenderer.update
-	camera.updateMatrixWorld();
-	tilesRenderer.update();
-	renderer.render( scene, camera );
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setPixelRatio( window.devicePixelRatio );
 
 }
 
 function animate() {
+
 	requestAnimationFrame( animate );
+
+	if ( ! tiles ) return;
+
+	tiles.setCamera( camera );
+	tiles.setResolutionFromRenderer( camera, renderer );
+
+	// update tiles
 	camera.updateMatrixWorld();
-	// tilesRenderer.update();
-	cube.rotation.x += 0.01;
-	cube.rotation.y += 0.01;
+	tiles.update();
 
 	renderer.render( scene, camera );
-}
 
-animate();
+}
