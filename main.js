@@ -20,7 +20,7 @@ let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
 
 const params = {
 
-	'ionAssetId': '2275057',
+	'ionAssetId': '2310472',
 	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZjk1OTU2My1mNDBhLTQzYzEtOTcxMS01MzNiOWIxMDZiYTMiLCJpZCI6MTY2MDkxLCJpYXQiOjE2OTQ1NDMyOTN9.rHxFqNMZ26EFHwHYUJ-xW0fDZtjamHXiM-4HR6YIHXY',
 	'reload': reinstantiateTiles,
 
@@ -117,9 +117,9 @@ function init() {
 	cubeGeo = new THREE.BoxGeometry( 1, 1, 1 );
 	cubeMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 	cube = new THREE.Mesh( cubeGeo, cubeMat );
-	scene.add( cube );
+	// scene.add( cube );
 	
-	light = new THREE.AmbientLight( 0x404040,10 ); // soft white light
+	light = new THREE.AmbientLight( 0x404040,80 ); // soft white light
 	scene.add( light );
 
 	reinstantiateTiles();
@@ -136,7 +136,6 @@ function init() {
 	ionOptions.add( params, 'ionAccessToken' );
 	ionOptions.add( params, 'reload' );
 	ionOptions.open();
-
 }
 
 function onWindowResize() {
