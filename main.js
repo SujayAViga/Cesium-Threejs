@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TilesRenderer, CesiumIonTilesRenderer } from '3d-tiles-renderer';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
+import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls';
 import { DRACOLoader } from 'three/examples/jsm/loaders/dracoloader';
 import {
 	Scene,
@@ -15,6 +15,8 @@ import {
 
 import { GLTFLoader } from 'three/examples/jsm/loaders/gltfloader';
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import Stats from 'three/addons/libs/stats.module.js';
 
 let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
 
@@ -26,9 +28,8 @@ const params = {
 
 };
 
-init();
-animate();
 
+//-------------tiles setup-----------------//
 function rotationBetweenDirections( dir1, dir2 ) {
 
 	const rotation = new Quaternion();
@@ -97,35 +98,172 @@ function reinstantiateTiles() {
 	setupTiles();
 
 }
+//-------------tiles setup-----------------//
+
+//-------------------------------scene setup--------------------//
 
 
-function init() {
+
+// FPS controls
+	let moveForward = false;
+	let moveBackward = false;
+	let moveLeft = false;
+	let moveRight = false;
+	let canJump = false;
+
+	let prevTime = performance.now();
+	const velocity = new THREE.Vector3();
+	const direction = new THREE.Vector3();
+
+function updateFPSControls(){
+	const time = performance.now();
+	const delta = ( time - prevTime ) / 1000;
+
+	velocity.x -= velocity.x * 10.0 * delta;
+	velocity.z -= velocity.z * 10.0 * delta;
+
+	velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+
+	direction.z = Number( moveForward ) - Number( moveBackward );
+	direction.x = Number( moveRight ) - Number( moveLeft );
+	direction.normalize(); // this ensures consistent movements in all directions
+
+	if ( moveForward || moveBackward ) velocity.z -= direction.z * 1000.0 * delta;//intial value 300
+	if ( moveLeft || moveRight ) velocity.x -= direction.x * 1000.0 * delta;//initial value 300
+
+	FPScontrols.moveRight( - velocity.x * delta );
+	FPScontrols.moveForward( - velocity.z * delta );
+	
+	prevTime = time;
+}
+
+
 
 	scene = new Scene();
+	renderer = new WebGLRenderer( { antialias: true } );
+	let sky, sun;
+	// Add Sky
+	sky = new Sky();
+	sky.scale.setScalar( 450000 );
+	scene.add( sky );
+
+	sun = new THREE.Vector3();
+	const effectController = {
+		turbidity: 10,
+		rayleigh: 3,
+		mieCoefficient: 0.005,
+		mieDirectionalG: 0.7,
+		elevation: 2,
+		azimuth: 180,
+		exposure: renderer.toneMappingExposure
+	};
+	const uniforms = sky.material.uniforms;
+					uniforms[ 'turbidity' ].value = effectController.turbidity;
+					uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+					uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+					uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+					const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+					const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+					sun.setFromSphericalCoords( 1, phi, theta );
+
+					uniforms[ 'sunPosition' ].value.copy( sun );
+
+					renderer.toneMappingExposure = effectController.exposure;
 
 	// primary camera view
-	renderer = new WebGLRenderer( { antialias: true } );
+	
 	renderer.setClearColor( 0x151c1f );
 
 	document.body.appendChild( renderer.domElement );
 	renderer.domElement.tabIndex = 1;
 
 	camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 4000 );
-	camera.position.set( 1, 5, 4 );
-	controls = new OrbitControls( camera, renderer.domElement );
+	camera.position.set( 0, -17, 0 );
+	// controls = new OrbitControls( camera, renderer.domElement );
+	const FPScontrols = new PointerLockControls(camera,renderer.domElement);
+	document.addEventListener('click',function(){FPScontrols.lock();})
+	
+
+	const onKeyDown = function ( event ) {
+
+		switch ( event.code ) {
+
+			case 'ArrowUp':
+			case 'KeyW':
+				moveForward = true;
+				break;
+
+			case 'ArrowLeft':
+			case 'KeyA':
+				moveLeft = true;
+				break;
+
+			case 'ArrowDown':
+			case 'KeyS':
+				moveBackward = true;
+				break;
+
+			case 'ArrowRight':
+			case 'KeyD':
+				moveRight = true;
+				break;
+
+			case 'Space':
+				if ( canJump === true ) velocity.y += 350;
+				canJump = false;
+				break;
+
+		}
+
+	};
+
+	const onKeyUp = function ( event ) {
+
+		switch ( event.code ) {
+
+			case 'ArrowUp':
+			case 'KeyW':
+				moveForward = false;
+				break;
+
+			case 'ArrowLeft':
+			case 'KeyA':
+				moveLeft = false;
+				break;
+
+			case 'ArrowDown':
+			case 'KeyS':
+				moveBackward = false;
+				break;
+
+			case 'ArrowRight':
+			case 'KeyD':
+				moveRight = false;
+				break;
+
+		}
+
+	};
+	document.addEventListener( 'keydown', onKeyDown );
+	document.addEventListener( 'keyup', onKeyUp );
+
+	
 
 	cubeGeo = new THREE.BoxGeometry( 1, 1, 1 );
 	cubeMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 	cube = new THREE.Mesh( cubeGeo, cubeMat );
 	// scene.add( cube );
 	
-	light = new THREE.AmbientLight( 0x404040,80 ); // soft white light
+	light = new THREE.AmbientLight( 0x404040,50 ); // soft white light
 	scene.add( light );
 
 	reinstantiateTiles();
 
 	onWindowResize();
 	window.addEventListener( 'resize', onWindowResize, false );
+// ---------------------------------------------//
 
 	// GUI
 	const gui = new GUI();
@@ -136,10 +274,8 @@ function init() {
 	ionOptions.add( params, 'ionAccessToken' );
 	ionOptions.add( params, 'reload' );
 	ionOptions.open();
-}
 
 function onWindowResize() {
-
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 	renderer.setSize( window.innerWidth, window.innerHeight );
@@ -150,7 +286,7 @@ function onWindowResize() {
 function animate() {
 
 	requestAnimationFrame( animate );
-
+	updateFPSControls();
 	if ( ! tiles ) return;
 
 	tiles.setCamera( camera );
@@ -163,3 +299,6 @@ function animate() {
 	renderer.render( scene, camera );
 
 }
+
+
+animate();
