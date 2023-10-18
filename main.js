@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { TilesRenderer, CesiumIonTilesRenderer } from '3d-tiles-renderer';
+import { CesiumIonTilesRenderer } from '3d-tiles-renderer';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls';
-import { DRACOLoader } from 'three/examples/jsm/loaders/dracoloader';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import {
 	Scene,
 	WebGLRenderer,
@@ -13,7 +13,7 @@ import {
 	Sphere,
 } from 'three';
 
-import { GLTFLoader } from 'three/examples/jsm/loaders/gltfloader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import Stats from 'three/addons/libs/stats.module.js';
@@ -22,8 +22,8 @@ let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
 
 const params = {
 
-	'ionAssetId': '2310472',
-	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZjk1OTU2My1mNDBhLTQzYzEtOTcxMS01MzNiOWIxMDZiYTMiLCJpZCI6MTY2MDkxLCJpYXQiOjE2OTQ1NDMyOTN9.rHxFqNMZ26EFHwHYUJ-xW0fDZtjamHXiM-4HR6YIHXY',
+	'ionAssetId': '2318102',
+	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxYzE4YmMwZi1lODMyLTQyN2MtODY3Yy1mODliN2M0ZTBmOGUiLCJpZCI6MTcyNDY0LCJpYXQiOjE2OTc2MDgzMTZ9.u7HknZNbhLfwFPtZwh7pf4DbbejRKnLI13Mmqd-cVNY',
 	'reload': reinstantiateTiles,
 
 };
