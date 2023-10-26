@@ -22,7 +22,7 @@ let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
 
 const params = {
 
-	'ionAssetId': '2318102',
+	'ionAssetId': '2329921',
 	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxYzE4YmMwZi1lODMyLTQyN2MtODY3Yy1mODliN2M0ZTBmOGUiLCJpZCI6MTcyNDY0LCJpYXQiOjE2OTc2MDgzMTZ9.u7HknZNbhLfwFPtZwh7pf4DbbejRKnLI13Mmqd-cVNY',
 	'reload': reinstantiateTiles,
 
