@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "3d-tiles-renderer": "^0.3.20",
+    "obj23dtiles": "^1.0.8",
     "three": "^0.156.1"
   },
   "devDependencies": {

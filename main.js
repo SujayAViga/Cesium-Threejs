@@ -12,6 +12,7 @@ import {
 	Group,
 	Sphere,
 } from 'three';
+import { DebugCesiumIonTilesRenderer } from '3d-tiles-renderer';
 
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
@@ -21,9 +22,10 @@ import Stats from 'three/addons/libs/stats.module.js';
 let camera, controls, scene, renderer, tiles,cube,cubeGeo,cubeMat,light;
 
 const params = {
-
-	'ionAssetId': '2329921',
-	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxYzE4YmMwZi1lODMyLTQyN2MtODY3Yy1mODliN2M0ZTBmOGUiLCJpZCI6MTcyNDY0LCJpYXQiOjE2OTc2MDgzMTZ9.u7HknZNbhLfwFPtZwh7pf4DbbejRKnLI13Mmqd-cVNY',
+	'errorTarget': 12,
+	'ionAssetId': '2329341',
+	'ionAccessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyZjk1OTU2My1mNDBhLTQzYzEtOTcxMS01MzNiOWIxMDZiYTMiLCJpZCI6MTY2MDkxLCJpYXQiOjE2OTQ1NDMyOTN9.rHxFqNMZ26EFHwHYUJ-xW0fDZtjamHXiM-4HR6YIHXY',
+	'displayBoxBounds': true,
 	'reload': reinstantiateTiles,
 
 };
@@ -91,7 +93,9 @@ function reinstantiateTiles() {
 		tiles.group.quaternion.z = rotationToNorthPole.z;
 		tiles.group.quaternion.w = rotationToNorthPole.w;
 
+		tiles.group.position.x = 0;
 		tiles.group.position.y = - distanceToEllipsoidCenter;
+		tiles.group.position.z = 0;
 
 	};
 
@@ -119,8 +123,8 @@ function updateFPSControls(){
 	const time = performance.now();
 	const delta = ( time - prevTime ) / 1000;
 
-	velocity.x -= velocity.x * 10.0 * delta;
-	velocity.z -= velocity.z * 10.0 * delta;
+	velocity.x -= velocity.x * 1.0 * delta;
+	velocity.z -= velocity.z * 1.0 * delta;
 
 	velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
 
@@ -179,8 +183,8 @@ function updateFPSControls(){
 	document.body.appendChild( renderer.domElement );
 	renderer.domElement.tabIndex = 1;
 
-	camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 4000 );
-	camera.position.set( 0, -17, 0 );
+	camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000);
+	camera.position.set( 0, 0, 0 );
 	// controls = new OrbitControls( camera, renderer.domElement );
 	const FPScontrols = new PointerLockControls(camera,renderer.domElement);
 	document.addEventListener('click',function(){FPScontrols.lock();})
@@ -254,7 +258,8 @@ function updateFPSControls(){
 	cubeGeo = new THREE.BoxGeometry( 1, 1, 1 );
 	cubeMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 	cube = new THREE.Mesh( cubeGeo, cubeMat );
-	// scene.add( cube );
+	cube.position.set(0,0,0);
+	scene.add( cube );
 	
 	light = new THREE.AmbientLight( 0x404040,50 ); // soft white light
 	scene.add( light );
@@ -270,8 +275,10 @@ function updateFPSControls(){
 	gui.width = 300;
 
 	const ionOptions = gui.addFolder( 'Ion' );
+	ionOptions.add( params, 'errorTarget', 0, 100 );
 	ionOptions.add( params, 'ionAssetId' );
 	ionOptions.add( params, 'ionAccessToken' );
+	ionOptions.add( params, 'displayBoxBounds' );
 	ionOptions.add( params, 'reload' );
 	ionOptions.open();
 
@@ -284,18 +291,21 @@ function onWindowResize() {
 }
 
 function animate() {
-
+	
 	requestAnimationFrame( animate );
+	camera.updateMatrixWorld();
 	updateFPSControls();
 	if ( ! tiles ) return;
-
+	tiles.displayBoxBounds = params.displayBoxBounds;
+	tiles.errorTarget = params.errorTarget;
 	tiles.setCamera( camera );
+	
 	tiles.setResolutionFromRenderer( camera, renderer );
-
+	
 	// update tiles
-	camera.updateMatrixWorld();
+	
 	tiles.update();
-
+	console.log(camera.position);
 	renderer.render( scene, camera );
 
 }
